@@ -12,6 +12,7 @@ dependencies = [
     "html2text>=2025.4.15",
     "huggingface-hub>=0.34,<1.0",
     "isort>=7.0.0",
+    "langchain-core>=1.2.7",
     "langchain-openai>=1.1.7",
     "langgraph>=1.0.6",
     "mineru>=2.7.1",

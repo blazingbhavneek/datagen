@@ -14,6 +14,7 @@ import os
 import pickle
 from datetime import datetime
 from pathlib import Path
+from pprint import pprint
 from typing import Any, Dict, List, Literal, Optional, TypedDict
 
 import chromadb
@@ -343,6 +344,21 @@ class ToolRegistry:
 # QUESTION GENERATION
 # ============================================================================
 
+from typing import List
+from pydantic import BaseModel, Field  # Pydantic v2
+import asyncio
+
+# Define Pydantic models for structured outputs (using v2)
+class GeneratedQuestion(BaseModel):  
+    question: str = Field(description="The generated question text")
+    question_type: str = Field(description="Difficulty level: 'easy' or 'medium'")
+    rationale: str = Field(description="Explanation for why this question is appropriate")
+
+class QuestionBatch(BaseModel):
+    questions: List[GeneratedQuestion] = Field(description="List of generated questions")
+
+class FilterIndices(BaseModel):  
+    indices_to_keep: List[int] = Field(description="List of 1-indexed positions to keep after filtering")
 
 class QuestionGenerator:
     def __init__(self, config: QAGeneratorConfig):
@@ -353,6 +369,7 @@ class QuestionGenerator:
             api_key="dummy",
             model=config.llm_model,
             temperature=0.7,
+            use_responses_api=True
         )
 
     async def generate_for_chunk(self, chunk: Chunk) -> List[Question]:
@@ -361,51 +378,59 @@ class QuestionGenerator:
         )
         medium_count = self.config.questions_per_chunk - easy_count
 
-        prompt = f"""Generate {self.config.questions_per_chunk} technical questions:
+        prompt = f"""Generate {self.config.questions_per_chunk} technical questions based on the following content:
 
 Content ({chunk.chunk_type}): {chunk.content[:2000]}
 
 Requirements:
-- {easy_count} easy (direct facts)
-- {medium_count} medium (analysis required)
+- {easy_count} easy questions (direct facts)
+- {medium_count} medium questions (requiring analysis)
 
-JSON array: [{{"question": "...", "question_type": "easy|medium", "rationale": "..."}}]"""
+Ensure each question is relevant to the content and follows the difficulty requirements."""
 
-        resp = await self.llm.ainvoke([HumanMessage(content=prompt)])
-        data = extract_json(resp.content) or []
-
-        if isinstance(data, dict):
-            data = [data]
+        # Use structured output with Pydantic v2
+        structured_llm = self.llm.with_structured_output(QuestionBatch)
+        response: QuestionBatch = await structured_llm.ainvoke(prompt)
 
         questions = []
-        for i, q in enumerate(data):
+        for i, gen_q in enumerate(response.questions):
             questions.append(
                 Question(
                     id=f"{chunk.id}_q{i+1}",
-                    question=q.get("question", ""),
-                    question_type=q.get("question_type", "medium"),
+                    question=gen_q.question,
+                    question_type=gen_q.question_type,
                     source_chunk_id=chunk.id,
-                    rationale=q.get("rationale", ""),
+                    rationale=gen_q.rationale,
                     generation_timestamp=datetime.now().isoformat(),
                 )
             )
 
-        # Filter
+        # Filter questions using structured output
         if questions:
             q_text = "\n".join(
                 [f"{i+1}. {q.question}" for i, q in enumerate(questions)]
             )
-            filter_prompt = f"""Filter questions. Keep good ones.
+            filter_prompt = f"""Analyze the following questions based on the content. Return only the 1-indexed positions of high-quality questions to keep.
 
 Content: {chunk.content[:1000]}
 Questions:\n{q_text}
 
-Return indices to keep: [1, 3, 5, ...]"""
+Keep only questions that:
+- Are clearly answerable from the content
+- Are technically accurate
+- Represent the specified difficulty levels
+- Are well-formulated"""
 
-            resp2 = await self.llm.ainvoke([HumanMessage(content=filter_prompt)])
-            kept = extract_json(resp2.content)
-            if isinstance(kept, list):
-                questions = [questions[i - 1] for i in kept if 0 < i <= len(questions)]
+            # Use structured output for filtering
+            filter_structured_llm = self.llm.with_structured_output(FilterIndices)
+            filter_response: FilterIndices = await filter_structured_llm.ainvoke(filter_prompt)
+            
+            # Convert 1-indexed to 0-indexed and filter
+            filtered_questions = []
+            for idx in filter_response.indices_to_keep:
+                if 1 <= idx <= len(questions):  # Check valid range
+                    filtered_questions.append(questions[idx - 1])
+            questions = filtered_questions
 
         return questions
 
@@ -414,18 +439,46 @@ Return indices to keep: [1, 3, 5, ...]"""
 # ANSWER GENERATION WITH LANGGRAPH
 # ============================================================================
 
+from typing import List, Literal
+from pydantic import BaseModel, Field  # Pydantic v2
+from langgraph.graph import StateGraph
+from langgraph.prebuilt import ToolNode
+from langchain_core.messages import (
+    BaseMessage, 
+    SystemMessage, 
+    HumanMessage, 
+    AIMessage, 
+    ToolMessage
+)
+
+# Define Pydantic model for the final answer only (not the reasoning steps)
+class FinalAnswerResponse(BaseModel):
+    """Structured response for the final answer"""
+    answer: str = Field(description="Final answer to the question")
+    source_chunks_used: List[str] = Field(description="IDs of source chunks used in the answer")
 
 class AnswerGenerator:
     def __init__(self, config: QAGeneratorConfig, tool_registry: ToolRegistry):
         self.config = config
         self.tools = tool_registry.get_tools()
         self.logger = setup_logger("answer_gen")
-        self.llm = ChatOpenAI(
+        # Initialize main LLM for tool interactions
+        self.main_llm = ChatOpenAI(
             base_url=config.llm_endpoint,
             api_key="dummy",
             model=config.llm_model,
             temperature=0.3,
+            use_responses_api=True
         ).bind_tools(self.tools)
+        
+        # Initialize separate LLM for final answer synthesis (without tools bound)
+        self.synthesis_llm = ChatOpenAI(
+            base_url=config.llm_endpoint,
+            api_key="dummy",
+            model=config.llm_model,
+            temperature=0.1,
+            use_responses_api=True
+        )
 
     def build_graph(self) -> StateGraph:
         workflow = StateGraph(AnswerGenState)
@@ -439,7 +492,7 @@ class AnswerGenerator:
         return workflow.compile()
 
     async def agent_node(self, state: AnswerGenState) -> AnswerGenState:
-        response = await self.llm.ainvoke(state["messages"])
+        response = await self.main_llm.ainvoke(state["messages"])
         state["messages"].append(response)
         state["iteration"] += 1
         return state
@@ -471,21 +524,61 @@ class AnswerGenerator:
 
         result = await graph.ainvoke(initial_state)
 
-        # Extract reasoning and answer
-        reasoning_steps = self._extract_reasoning(result["messages"])
-        final_answer = self._extract_answer(result["messages"])
+        # Extract the actual reasoning steps that happened during the workflow
+        actual_reasoning_steps = self._extract_reasoning(result["messages"])
+        
+        # Extract sources used during the process
         source_chunks = self._extract_sources(result["messages"])
+        
+        # Use structured output to synthesize the final answer based on the reasoning trace
+        formatted_context = self._format_context_for_synthesis(
+            question.question, 
+            result["messages"]
+        )
+        
+        # Get structured final answer
+        structured_llm_with_schema = self.synthesis_llm.with_structured_output(FinalAnswerResponse)
+        final_response: FinalAnswerResponse = await structured_llm_with_schema.ainvoke(formatted_context)
 
         return AnswerResult(
             question_id=question.id,
-            answer=final_answer,
-            reasoning_steps=reasoning_steps,
-            source_chunks_used=source_chunks,
+            answer=final_response.answer,
+            reasoning_steps=actual_reasoning_steps,  # Preserve the actual reasoning trace
+            source_chunks_used=list(set(source_chunks + final_response.source_chunks_used)),  # Combine sources
             iterations=result["iteration"],
             completed=True,
         )
 
-    def _extract_reasoning(self, messages: List[Any]) -> List[ReasoningStep]:
+    def _format_context_for_synthesis(self, original_question: str, messages: List[BaseMessage]) -> str:
+        """Format context for final answer synthesis"""
+        context_parts = [
+            f"ORIGINAL QUESTION: {original_question}",
+            "\nREASONING PROCESS FOLLOWED:",
+        ]
+        
+        for i, msg in enumerate(messages):
+            if isinstance(msg, SystemMessage):
+                continue  # Skip system message for synthesis
+            elif isinstance(msg, HumanMessage):
+                context_parts.append(f"Q: {msg.content}")
+            elif isinstance(msg, AIMessage):
+                if msg.content:
+                    context_parts.append(f"A: {msg.content}")
+                if hasattr(msg, "tool_calls") and msg.tool_calls:
+                    for tc in msg.tool_calls:
+                        context_parts.append(f"USED TOOL: {tc['name']}({tc['args']})")
+            elif isinstance(msg, ToolMessage):
+                content_str = str(msg.content)
+                if len(content_str) > 1000:
+                    content_str = content_str[:1000] + "..."
+                context_parts.append(f"TOOL RESULT: {content_str}")
+        
+        context_parts.append("\nBASED ON THE ABOVE REASONING, PROVIDE A COMPREHENSIVE FINAL ANSWER:")
+        
+        return "\n".join(context_parts)
+
+    def _extract_reasoning(self, messages: List[BaseMessage]) -> List[ReasoningStep]:
+        """Extract actual reasoning steps from the workflow execution"""
         steps = []
         step_num = 1
         for i, msg in enumerate(messages):
@@ -496,12 +589,14 @@ class AnswerGenerator:
                         if i + 1 < len(messages) and isinstance(
                             messages[i + 1], ToolMessage
                         ):
-                            obs = messages[i + 1].content[:500]
+                            obs = str(messages[i + 1].content)
+                            if len(obs) > 500:
+                                obs = obs[:500] + "..."
                         steps.append(
                             ReasoningStep(
                                 step_number=step_num,
-                                thought=msg.content or "Using tool...",
-                                action=tc.get("name", "tool"),
+                                thought=msg.content or "Using tool to gather information...",
+                                action=tc.get("name", "unknown_tool"),
                                 action_input=tc.get("args", {}),
                                 observation=obs,
                             )
@@ -509,13 +604,7 @@ class AnswerGenerator:
                         step_num += 1
         return steps
 
-    def _extract_answer(self, messages: List[Any]) -> str:
-        for msg in reversed(messages):
-            if isinstance(msg, AIMessage) and msg.content:
-                return msg.content
-        return "No answer generated"
-
-    def _extract_sources(self, messages: List[Any]) -> List[str]:
+    def _extract_sources(self, messages: List[BaseMessage]) -> List[str]:
         sources = set()
         for msg in messages:
             if hasattr(msg, "content") and isinstance(msg.content, str):
@@ -535,6 +624,20 @@ class AnswerGenerator:
 # ============================================================================
 
 
+from typing import Dict
+from pydantic import BaseModel, Field  # Pydantic v2
+from langchain_core.messages import HumanMessage
+
+# Define Pydantic model for evaluation scores
+class EvaluationScores(BaseModel):
+    """Pydantic model for answer evaluation scores"""
+    completeness: float = Field(ge=0.0, le=1.0, description="How complete the answer is")
+    accuracy: float = Field(ge=0.0, le=1.0, description="How factually accurate the answer is")
+    relevance: float = Field(ge=0.0, le=1.0, description="How relevant the answer is to the question")
+    clarity: float = Field(ge=0.0, le=1.0, description="How clear and understandable the answer is")
+    specificity: float = Field(ge=0.0, le=1.0, description="How specific and detailed the answer is")
+    reasoning: float = Field(ge=0.0, le=1.0, description="Quality of the reasoning process shown")
+
 class AnswerJudge:
     def __init__(self, config: QAGeneratorConfig):
         self.config = config
@@ -543,30 +646,36 @@ class AnswerJudge:
             api_key="dummy",
             model=config.llm_model,
             temperature=0.1,
+            use_responses_api=True
         )
 
     async def evaluate(
         self, question: Question, answer: AnswerResult
     ) -> Dict[str, float]:
-        prompt = f"""Evaluate answer quality (0.0-1.0):
+        prompt = f"""Evaluate the quality of the following answer on a scale of 0.0 to 1.0 for each metric:
 
-Q: {question.question}
-A: {answer.answer}
+Question: {question.question}
+Answer: {answer.answer}
 
-JSON: {{"completeness": 0.x, "accuracy": 0.x, "relevance": 0.x, "clarity": 0.x, "specificity": 0.x, "reasoning": 0.x}}"""
+Provide scores for:
+- Completeness: How complete the answer is
+- Accuracy: How factually accurate the answer is
+- Relevance: How relevant the answer is to the question
+- Clarity: How clear and understandable the answer is
+- Specificity: How specific and detailed the answer is
+- Reasoning: Quality of the reasoning process shown
 
-        resp = await self.llm.ainvoke([HumanMessage(content=prompt)])
-        scores = extract_json(resp.content) or {
-            "completeness": 0.5,
-            "accuracy": 0.5,
-            "relevance": 0.5,
-            "clarity": 0.5,
-            "specificity": 0.5,
-            "reasoning": 0.5,
-        }
-        scores["overall"] = sum(scores.values()) / len(scores)
-        return scores
+Be objective and consider the technical nature of the question."""
 
+        # Use structured output with Pydantic v2 model
+        structured_llm = self.llm.with_structured_output(EvaluationScores)
+        scores: EvaluationScores = await structured_llm.ainvoke(prompt)
+        
+        # Convert to dictionary and add overall score
+        scores_dict = scores.model_dump()  # Pydantic v2 method
+        scores_dict["overall"] = sum(scores_dict.values()) / len(scores_dict)
+        
+        return scores_dict
 
 # ============================================================================
 # DATASET ASSEMBLY
@@ -617,7 +726,7 @@ class DatasetAssembler:
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         with open(path, "w") as f:
             for e in entries:
-                f.write(json.dumps(e.dict()) + "\n")
+                f.write(json.dumps(e.model_dump()) + "\n")
 
 
 # ============================================================================
@@ -634,6 +743,10 @@ class QAGeneratorPipeline:
         self.logger.info("=== Phase 1: Question Generation ===")
         chunk_mgr = ChunkManager(self.config)
         chunks = chunk_mgr.load_chunks()
+        
+        # TODO: Del later
+        chunks = [chunks[len(chunks)//2]]
+        
         self.logger.info(f"Loaded {len(chunks)} chunks")
 
         q_gen = QuestionGenerator(self.config)
@@ -653,6 +766,9 @@ class QAGeneratorPipeline:
                 pbar.update(1)
 
         self.logger.info(f"Generated {len(all_questions)} questions")
+        
+        # TODO: Del later
+        all_questions = [all_questions[len(all_questions)//2]]
 
         self.logger.info("=== Phase 2: Answer Generation ===")
         tool_reg = ToolRegistry(self.config)
@@ -665,6 +781,9 @@ class QAGeneratorPipeline:
             async with sem:
                 ans = await a_gen.generate_for_question(q)
                 score = await judge.evaluate(q, ans)
+                pprint(ans)
+                pprint(score)
+                print("-----")
                 ans.quality_score = score
                 if score["overall"] >= self.config.answer_quality_threshold:
                     return ans

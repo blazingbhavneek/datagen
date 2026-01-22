@@ -3,7 +3,7 @@ data_source_type: "doc"
 chroma_db_path: "parser/tests/output/chroma_db"
 chroma_collection: "docs_1768829901"
 llm_endpoint: "http://localhost:8000/v1"
-llm_model: "qwen"
+llm_model: "gpt-oss"
 embedding_endpoint: "http://localhost:8001/v1"
 embedding_model: "ruri-embed"
 questions_per_chunk: 10

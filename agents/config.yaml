@@ -9,3 +9,7 @@ embedding_model: "ruri-embed"
 questions_per_chunk: 10
 output_dir: "./output"
 dataset_name: "my_dataset"
+enable_llm_linking: True
+embed_with_summary: True
+cleanup_temp: False
+cleanup_cache: False

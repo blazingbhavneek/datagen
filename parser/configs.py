@@ -31,9 +31,16 @@ class DocParserConfig:
     chroma_db_path: str  # Path for ChromaDB persistence
     embedding_endpoint: str  # e.g., "http://192.168.1.100:8000/v1/embeddings"
     embedding_model: str  # Model name for embeddings
-    chunk_size: int = 2000  # Characters per chunk
+    chunk_size: int = 1000  # Characters per chunk
     chunk_overlap: int = 200  # Character overlap between chunks
     supported_formats: List[str] = None  # Default formats if not provided
+    enable_llm_linking: bool = True  # Whether to link chunks using LLM
+    llm_api_key: Optional[str] = None  # API key for LLM
+    llm_model: str = "gpt-oss"  # LLM model name
+    llm_base_url: str = "http://localhost:8000/v1"  # Base URL for LLM API
+    embed_with_summary: bool = True  # Whether to embed chunk summaries
+    cleanup_temp: bool = False # Whether to delete temp files after processing
+    cleanup_cache: bool = False # Whether to clear cache after processing
 
     def __post_init__(self):
         if self.supported_formats is None:
@@ -55,3 +62,4 @@ class DocParserOutput:
     chunk_metadata: List[Dict]  # Metadata for each chunk
     total_chunks: int
     processing_log: str  # Path to processing log
+    metadata: Optional[Dict] = None  # Additional stats or info

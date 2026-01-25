@@ -344,21 +344,32 @@ class ToolRegistry:
 # QUESTION GENERATION
 # ============================================================================
 
-from typing import List
-from pydantic import BaseModel, Field  # Pydantic v2
 import asyncio
+from typing import List
+
+from pydantic import BaseModel, Field  # Pydantic v2
+
 
 # Define Pydantic models for structured outputs (using v2)
-class GeneratedQuestion(BaseModel):  
+class GeneratedQuestion(BaseModel):
     question: str = Field(description="The generated question text")
     question_type: str = Field(description="Difficulty level: 'easy' or 'medium'")
-    rationale: str = Field(description="Explanation for why this question is appropriate")
+    rationale: str = Field(
+        description="Explanation for why this question is appropriate"
+    )
+
 
 class QuestionBatch(BaseModel):
-    questions: List[GeneratedQuestion] = Field(description="List of generated questions")
+    questions: List[GeneratedQuestion] = Field(
+        description="List of generated questions"
+    )
 
-class FilterIndices(BaseModel):  
-    indices_to_keep: List[int] = Field(description="List of 1-indexed positions to keep after filtering")
+
+class FilterIndices(BaseModel):
+    indices_to_keep: List[int] = Field(
+        description="List of 1-indexed positions to keep after filtering"
+    )
+
 
 class QuestionGenerator:
     def __init__(self, config: QAGeneratorConfig):
@@ -369,7 +380,7 @@ class QuestionGenerator:
             api_key="dummy",
             model=config.llm_model,
             temperature=0.7,
-            use_responses_api=True
+            use_responses_api=True,
         )
 
     async def generate_for_chunk(self, chunk: Chunk) -> List[Question]:
@@ -423,8 +434,10 @@ Keep only questions that:
 
             # Use structured output for filtering
             filter_structured_llm = self.llm.with_structured_output(FilterIndices)
-            filter_response: FilterIndices = await filter_structured_llm.ainvoke(filter_prompt)
-            
+            filter_response: FilterIndices = await filter_structured_llm.ainvoke(
+                filter_prompt
+            )
+
             # Convert 1-indexed to 0-indexed and filter
             filtered_questions = []
             for idx in filter_response.indices_to_keep:
@@ -440,22 +453,28 @@ Keep only questions that:
 # ============================================================================
 
 from typing import List, Literal
-from pydantic import BaseModel, Field  # Pydantic v2
+
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode
-from langchain_core.messages import (
-    BaseMessage, 
-    SystemMessage, 
-    HumanMessage, 
-    AIMessage, 
-    ToolMessage
-)
+from pydantic import BaseModel, Field  # Pydantic v2
+
 
 # Define Pydantic model for the final answer only (not the reasoning steps)
 class FinalAnswerResponse(BaseModel):
     """Structured response for the final answer"""
+
     answer: str = Field(description="Final answer to the question")
-    source_chunks_used: List[str] = Field(description="IDs of source chunks used in the answer")
+    source_chunks_used: List[str] = Field(
+        description="IDs of source chunks used in the answer"
+    )
+
 
 class AnswerGenerator:
     def __init__(self, config: QAGeneratorConfig, tool_registry: ToolRegistry):
@@ -468,16 +487,16 @@ class AnswerGenerator:
             api_key="dummy",
             model=config.llm_model,
             temperature=0.3,
-            use_responses_api=True
+            use_responses_api=True,
         ).bind_tools(self.tools)
-        
+
         # Initialize separate LLM for final answer synthesis (without tools bound)
         self.synthesis_llm = ChatOpenAI(
             base_url=config.llm_endpoint,
             api_key="dummy",
             model=config.llm_model,
             temperature=0.1,
-            use_responses_api=True
+            use_responses_api=True,
         )
 
     def build_graph(self) -> StateGraph:
@@ -526,36 +545,43 @@ class AnswerGenerator:
 
         # Extract the actual reasoning steps that happened during the workflow
         actual_reasoning_steps = self._extract_reasoning(result["messages"])
-        
+
         # Extract sources used during the process
         source_chunks = self._extract_sources(result["messages"])
-        
+
         # Use structured output to synthesize the final answer based on the reasoning trace
         formatted_context = self._format_context_for_synthesis(
-            question.question, 
-            result["messages"]
+            question.question, result["messages"]
         )
-        
+
         # Get structured final answer
-        structured_llm_with_schema = self.synthesis_llm.with_structured_output(FinalAnswerResponse)
-        final_response: FinalAnswerResponse = await structured_llm_with_schema.ainvoke(formatted_context)
+        structured_llm_with_schema = self.synthesis_llm.with_structured_output(
+            FinalAnswerResponse
+        )
+        final_response: FinalAnswerResponse = await structured_llm_with_schema.ainvoke(
+            formatted_context
+        )
 
         return AnswerResult(
             question_id=question.id,
             answer=final_response.answer,
             reasoning_steps=actual_reasoning_steps,  # Preserve the actual reasoning trace
-            source_chunks_used=list(set(source_chunks + final_response.source_chunks_used)),  # Combine sources
+            source_chunks_used=list(
+                set(source_chunks + final_response.source_chunks_used)
+            ),  # Combine sources
             iterations=result["iteration"],
             completed=True,
         )
 
-    def _format_context_for_synthesis(self, original_question: str, messages: List[BaseMessage]) -> str:
+    def _format_context_for_synthesis(
+        self, original_question: str, messages: List[BaseMessage]
+    ) -> str:
         """Format context for final answer synthesis"""
         context_parts = [
             f"ORIGINAL QUESTION: {original_question}",
             "\nREASONING PROCESS FOLLOWED:",
         ]
-        
+
         for i, msg in enumerate(messages):
             if isinstance(msg, SystemMessage):
                 continue  # Skip system message for synthesis
@@ -572,9 +598,11 @@ class AnswerGenerator:
                 if len(content_str) > 1000:
                     content_str = content_str[:1000] + "..."
                 context_parts.append(f"TOOL RESULT: {content_str}")
-        
-        context_parts.append("\nBASED ON THE ABOVE REASONING, PROVIDE A COMPREHENSIVE FINAL ANSWER:")
-        
+
+        context_parts.append(
+            "\nBASED ON THE ABOVE REASONING, PROVIDE A COMPREHENSIVE FINAL ANSWER:"
+        )
+
         return "\n".join(context_parts)
 
     def _extract_reasoning(self, messages: List[BaseMessage]) -> List[ReasoningStep]:
@@ -595,7 +623,8 @@ class AnswerGenerator:
                         steps.append(
                             ReasoningStep(
                                 step_number=step_num,
-                                thought=msg.content or "Using tool to gather information...",
+                                thought=msg.content
+                                or "Using tool to gather information...",
                                 action=tc.get("name", "unknown_tool"),
                                 action_input=tc.get("args", {}),
                                 observation=obs,
@@ -625,18 +654,34 @@ class AnswerGenerator:
 
 
 from typing import Dict
-from pydantic import BaseModel, Field  # Pydantic v2
+
 from langchain_core.messages import HumanMessage
+from pydantic import BaseModel, Field  # Pydantic v2
+
 
 # Define Pydantic model for evaluation scores
 class EvaluationScores(BaseModel):
     """Pydantic model for answer evaluation scores"""
-    completeness: float = Field(ge=0.0, le=1.0, description="How complete the answer is")
-    accuracy: float = Field(ge=0.0, le=1.0, description="How factually accurate the answer is")
-    relevance: float = Field(ge=0.0, le=1.0, description="How relevant the answer is to the question")
-    clarity: float = Field(ge=0.0, le=1.0, description="How clear and understandable the answer is")
-    specificity: float = Field(ge=0.0, le=1.0, description="How specific and detailed the answer is")
-    reasoning: float = Field(ge=0.0, le=1.0, description="Quality of the reasoning process shown")
+
+    completeness: float = Field(
+        ge=0.0, le=1.0, description="How complete the answer is"
+    )
+    accuracy: float = Field(
+        ge=0.0, le=1.0, description="How factually accurate the answer is"
+    )
+    relevance: float = Field(
+        ge=0.0, le=1.0, description="How relevant the answer is to the question"
+    )
+    clarity: float = Field(
+        ge=0.0, le=1.0, description="How clear and understandable the answer is"
+    )
+    specificity: float = Field(
+        ge=0.0, le=1.0, description="How specific and detailed the answer is"
+    )
+    reasoning: float = Field(
+        ge=0.0, le=1.0, description="Quality of the reasoning process shown"
+    )
+
 
 class AnswerJudge:
     def __init__(self, config: QAGeneratorConfig):
@@ -646,7 +691,7 @@ class AnswerJudge:
             api_key="dummy",
             model=config.llm_model,
             temperature=0.1,
-            use_responses_api=True
+            use_responses_api=True,
         )
 
     async def evaluate(
@@ -670,12 +715,13 @@ Be objective and consider the technical nature of the question."""
         # Use structured output with Pydantic v2 model
         structured_llm = self.llm.with_structured_output(EvaluationScores)
         scores: EvaluationScores = await structured_llm.ainvoke(prompt)
-        
+
         # Convert to dictionary and add overall score
         scores_dict = scores.model_dump()  # Pydantic v2 method
         scores_dict["overall"] = sum(scores_dict.values()) / len(scores_dict)
-        
+
         return scores_dict
+
 
 # ============================================================================
 # DATASET ASSEMBLY
@@ -743,10 +789,10 @@ class QAGeneratorPipeline:
         self.logger.info("=== Phase 1: Question Generation ===")
         chunk_mgr = ChunkManager(self.config)
         chunks = chunk_mgr.load_chunks()
-        
+
         # TODO: Del later
-        chunks = [chunks[len(chunks)//2]]
-        
+        chunks = [chunks[len(chunks) // 2]]
+
         self.logger.info(f"Loaded {len(chunks)} chunks")
 
         q_gen = QuestionGenerator(self.config)
@@ -766,9 +812,9 @@ class QAGeneratorPipeline:
                 pbar.update(1)
 
         self.logger.info(f"Generated {len(all_questions)} questions")
-        
+
         # TODO: Del later
-        all_questions = [all_questions[len(all_questions)//2]]
+        all_questions = [all_questions[len(all_questions) // 2]]
 
         self.logger.info("=== Phase 2: Answer Generation ===")
         tool_reg = ToolRegistry(self.config)

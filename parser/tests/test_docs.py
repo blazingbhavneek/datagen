@@ -1,6 +1,6 @@
 import asyncio
 import os
-from parser.docs import DocParserConfig, DocumentParserPipeline
+from parser.parser import DocParserConfig, DocumentParser
 from pathlib import Path
 from pprint import pprint
 
@@ -34,7 +34,7 @@ async def main():
     )
 
     # Initialize and run the parser
-    pipeline = DocumentParserPipeline(config)
+    pipeline = DocumentParser(config)
     result = await pipeline.process()
 
     print(f"Processing complete!")

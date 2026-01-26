@@ -1,3 +1,7 @@
+# SOURCE: /run/media/blazingbhavneek/Common/Code/datagen/parser/tests/input/test_docs_mini/intel.pdf
+# TIMESTAMP: 2026-01-26T19:24:30Z
+# FORMAT: .pdf
+---
 
 # 1.2 ナンル® oneAPI リルキットの配布にたて
 

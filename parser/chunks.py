@@ -475,10 +475,14 @@ For each summary point in the current chunk, determine:
 
                 for i, link_info in enumerate(response.links):
                     if i < len(curr_chunk.summary_points) and link_info.relates:
-                        curr_chunk.summary_points[i].prev_link = {
-                            "relation": link_info.relation or "",
-                            "common_topic": link_info.common_topic or "",
-                        }
+                        for i, link_info in enumerate(response.links):
+                            if i < len(curr_chunk.summary_points) and link_info.relates:
+                                curr_chunk.summary_points[i].prev_link = {
+                                    "chunk_id": prev_chunk.id,
+                                    "chunk_index": prev_chunk.chunk_index,
+                                    "relation": link_info.relation or "",
+                                    "common_topic": link_info.common_topic or "",
+                                }
             except Exception as e:
                 logging.error(f"Error linking with previous chunk: {e}")
 
@@ -511,6 +515,8 @@ For each summary point in the current chunk, determine:
                 for i, link_info in enumerate(response.links):
                     if i < len(curr_chunk.summary_points) and link_info.relates:
                         curr_chunk.summary_points[i].next_link = {
+                            "chunk_id": next_chunk.id,
+                            "chunk_index": next_chunk.chunk_index,
                             "relation": link_info.relation or "",
                             "common_topic": link_info.common_topic or "",
                         }

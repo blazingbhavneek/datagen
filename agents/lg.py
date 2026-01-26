@@ -32,6 +32,7 @@ from openai import AsyncOpenAI
 # Core dependencies
 from pydantic import BaseModel, Field
 from tqdm.asyncio import tqdm
+from agents.chunks import Chunk, ChunkReader
 
 # ============================================================================
 # CONFIGURATION & DATA MODELS
@@ -57,14 +58,6 @@ class QAGeneratorConfig(BaseModel):
     output_dir: str
     dataset_name: str
     cache_dir: str = "./cache"
-
-
-class Chunk(BaseModel):
-    id: str
-    content: str
-    chunk_type: str
-    source_file: str
-    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class Question(BaseModel):
@@ -152,78 +145,6 @@ def extract_json(text: str) -> Optional[Any]:
 
 
 # ============================================================================
-# CHUNK MANAGER
-# ============================================================================
-
-
-class ChunkManager:
-    def __init__(self, config: QAGeneratorConfig):
-        self.config = config
-        self.logger = setup_logger("chunk_manager")
-
-    def load_chunks(self) -> List[Chunk]:
-        if self.config.data_source_type == "doc":
-            return self._load_doc_chunks()
-        elif self.config.data_source_type == "code":
-            return self._load_code_chunks()
-        else:  # pair
-            return self._load_doc_chunks() + self._load_code_chunks()
-
-    def _load_doc_chunks(self) -> List[Chunk]:
-        if not self.config.chroma_db_path:
-            return []
-        try:
-            client = chromadb.PersistentClient(path=self.config.chroma_db_path)
-            collection = client.get_collection(name=self.config.chroma_collection)
-            results = collection.get()
-            chunks = []
-            for doc_id, content, metadata in zip(
-                results["ids"], results["documents"], results["metadatas"]
-            ):
-                chunks.append(
-                    Chunk(
-                        id=doc_id,
-                        content=content,
-                        chunk_type="doc",
-                        source_file=metadata.get("source_file", "unknown"),
-                        metadata=metadata,
-                    )
-                )
-            self.logger.info(f"Loaded {len(chunks)} doc chunks")
-            return chunks
-        except Exception as e:
-            self.logger.error(f"Error loading doc chunks: {e}")
-            return []
-
-    def _load_code_chunks(self) -> List[Chunk]:
-        if not self.config.code_graph_path:
-            return []
-        try:
-            with open(self.config.code_graph_path, "rb") as f:
-                code_graph = pickle.load(f)
-            graph = code_graph.graph if hasattr(code_graph, "graph") else code_graph
-            chunks = []
-            for node_id, node_data in graph.nodes(data=True):
-                node_type = node_data.get("type", "").lower()
-                if node_type in ["function", "class", "file"]:
-                    chunks.append(
-                        Chunk(
-                            id=node_id,
-                            content=node_data.get("code", "")
-                            or node_data.get("summary", ""),
-                            chunk_type=node_type,
-                            source_file=node_data.get("file_path", "unknown"),
-                            metadata=node_data,
-                        )
-                    )
-            self.logger.info(f"Loaded {len(chunks)} code chunks")
-            return chunks
-        except Exception as e:
-            self.logger.error(f"Error loading code chunks: {e}")
-            return []
-
-
-# ============================================================================
 # TOOLS
 # ============================================================================
 
@@ -237,14 +158,12 @@ class ToolRegistry:
     def _init_clients(self):
         if self.config.data_source_type in ["doc", "pair"]:
             try:
-                self.chroma_client = chromadb.PersistentClient(
-                    path=self.config.chroma_db_path
-                )
-                self.chroma_collection = self.chroma_client.get_collection(
-                    self.config.chroma_collection
+                self.chunk_reader = ChunkReader(
+                    chroma_db_path=self.config.chroma_db_path,
+                    collection_name=self.config.chroma_collection
                 )
             except:
-                self.chroma_collection = None
+                self.chunk_reader = None
 
         if self.config.data_source_type in ["code", "pair"]:
             try:
@@ -259,27 +178,56 @@ class ToolRegistry:
         )
 
     async def search_docs(self, query: str, n_results: int = 5) -> str:
-        if not self.chroma_collection:
+        if not self.chunk_reader:
             return "Doc search unavailable"
         try:
             resp = await self.embedding_client.embeddings.create(
                 input=query, model=self.config.embedding_model
             )
             emb = resp.data[0].embedding
-            results = self.chroma_collection.query(
+            results = self.chunk_reader.collection.query(
                 query_embeddings=[emb], n_results=n_results
             )
             out = []
             for doc_id, doc, meta in zip(
                 results["ids"][0], results["documents"][0], results["metadatas"][0]
             ):
-                out.append(
-                    {
-                        "chunk_id": doc_id,
-                        "content": doc[:500],
-                        "source": meta.get("source_file"),
-                    }
-                )
+                # Get the full chunk object for enhanced info
+                chunk = self.chunk_reader.get_chunk_by_id(doc_id)
+                
+                chunk_info = {
+                    "chunk_id": doc_id,
+                    "chunk_index": chunk.chunk_index if chunk else 0,
+                    "content": doc[:500],
+                    "source": meta.get("source_file"),
+                    "headers": chunk.headers if chunk else [],
+                }
+                
+                # Add link information if available
+                if chunk and chunk.has_summaries():
+                    summary_points = chunk.get_summary_points()
+                    chunk_info["summary"] = [sp.text for sp in summary_points[:2]]
+                    
+                    # Add navigation hints
+                    if chunk.has_prev_links():
+                        prev_link = next((sp.prev_link for sp in summary_points if sp.prev_link), None)
+                        if prev_link:
+                            chunk_info["prev_chunk"] = {
+                                "id": prev_link.get("chunk_id"),
+                                "relation": prev_link.get("relation"),
+                                "topic": prev_link.get("common_topic")
+                            }
+                    
+                    if chunk.has_next_links():
+                        next_link = next((sp.next_link for sp in summary_points if sp.next_link), None)
+                        if next_link:
+                            chunk_info["next_chunk"] = {
+                                "id": next_link.get("chunk_id"),
+                                "relation": next_link.get("relation"),
+                                "topic": next_link.get("common_topic")
+                            }
+                
+                out.append(chunk_info)
             return json.dumps(out, indent=2)
         except Exception as e:
             return f"Error: {e}"
@@ -328,6 +276,70 @@ class ToolRegistry:
 
             tools.append(search_documentation)
 
+
+        @tool
+        async def get_linked_chunk(chunk_id: str, direction: str = "next") -> str:
+            """Get the previous or next linked chunk by ID.
+            
+            Args:
+                chunk_id: ID of the current chunk
+                direction: Either 'prev' or 'next' to get the linked chunk
+            
+            Returns:
+                JSON with the linked chunk information
+            """
+            if not self.chunk_reader:
+                return "Chunk navigation unavailable"
+            
+            try:
+                current = self.chunk_reader.get_chunk_by_id(chunk_id)
+                if not current:
+                    return f"Chunk {chunk_id} not found"
+                
+                # Get the link
+                summary_points = current.get_summary_points()
+                target_id = None
+                relation = None
+                topic = None
+                
+                if direction == "prev" and current.has_prev_links():
+                    for sp in summary_points:
+                        if sp.prev_link:
+                            target_id = sp.prev_link.get("chunk_id")
+                            relation = sp.prev_link.get("relation")
+                            topic = sp.prev_link.get("common_topic")
+                            break
+                elif direction == "next" and current.has_next_links():
+                    for sp in summary_points:
+                        if sp.next_link:
+                            target_id = sp.next_link.get("chunk_id")
+                            relation = sp.next_link.get("relation")
+                            topic = sp.next_link.get("common_topic")
+                            break
+                
+                if not target_id:
+                    return f"No {direction} link found for chunk {chunk_id}"
+                
+                # Get the linked chunk
+                linked = self.chunk_reader.get_chunk_by_id(target_id)
+                if not linked:
+                    return f"Linked chunk {target_id} not found"
+                
+                return json.dumps({
+                    "chunk_id": linked.id,
+                    "chunk_index": linked.chunk_index,
+                    "content": linked.content[:500],
+                    "source": linked.source_file,
+                    "headers": linked.headers,
+                    "relation": relation,
+                    "common_topic": topic,
+                    "summary": [sp.text for sp in linked.get_summary_points()[:2]] if linked.has_summaries() else []
+                }, indent=2)
+            except Exception as e:
+                return f"Error: {e}"
+        
+        tools.append(get_linked_chunk)
+
         if self.config.data_source_type in ["code", "pair"]:
 
             @tool
@@ -338,6 +350,8 @@ class ToolRegistry:
             tools.append(search_codebase)
 
         return tools
+
+
 
 
 # ============================================================================
@@ -787,8 +801,8 @@ class QAGeneratorPipeline:
 
     async def run(self):
         self.logger.info("=== Phase 1: Question Generation ===")
-        chunk_mgr = ChunkManager(self.config)
-        chunks = chunk_mgr.load_chunks()
+        chunk_mgr = ChunkReader(self.config.chroma_db_path, self.config.chroma_collection)
+        chunks = chunk_mgr.load_all_chunks()
 
         # TODO: Del later
         chunks = [chunks[len(chunks) // 2]]

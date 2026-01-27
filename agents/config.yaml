@@ -1,7 +1,7 @@
 # config.yaml
 data_source_type: "doc"
 chroma_db_path: "parser/tests/output/chroma_db"
-chroma_collection: "docs_1769455393"
+chroma_collection: "docs_1769546354"
 llm_endpoint: "http://localhost:8000/v1"
 llm_model: "gpt-oss"
 embedding_endpoint: "http://localhost:8001/v1"

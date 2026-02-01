@@ -1,0 +1,29 @@
+{
+  "_meta": {
+    "phase": "phase3",
+    "identifier": "gap_analysis",
+    "saved_at": "2026-02-01T20:39:13.708311",
+    "model": "gpt-4o"
+  },
+  "data": {
+    "gaps": [
+      {
+        "gap_id": "prereq_chain_0",
+        "involved_chunks": [
+          "chunk_0",
+          "chunk_1"
+        ],
+        "involved_components": [
+          "DPC++",
+          "queue",
+          "buffer<int>"
+        ],
+        "description": "The dependency chain from DPC++ to buffer<int> is only partially documented. While DPC++ explicitly depends on queue, and buffer<int> implicitly depends on queue, there is no direct or indirect documentation linking DPC++ to buffer<int> through the chain. This creates a gap where the full prerequisite chain remains unresolved without additional context.",
+        "implicit_edges": [
+          "buffer<int> -> queue (is_explicit=false)"
+        ],
+        "why_rag_fails": "The direct link between DPC++ and buffer<int> is not explicitly stated in the document. Retrieval systems cannot infer the full chain without explicit documentation of the connection between DPC++ and buffer<int>, even though their dependencies are indirectly related through queue."
+      }
+    ]
+  }
+}

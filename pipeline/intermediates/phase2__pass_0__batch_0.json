@@ -1,0 +1,50 @@
+{
+  "_meta": {
+    "phase": "phase2",
+    "identifier": "pass_0__batch_0",
+    "saved_at": "2026-02-01T20:38:27.295550",
+    "model": "gpt-4o"
+  },
+  "data": {
+    "batch_label": "pass_0__batch_0",
+    "edges": [
+      {
+        "from_component": "DPC++",
+        "to_component": "queue",
+        "from_chunk": "chunk_0",
+        "to_chunk": "chunk_1",
+        "relationship_type": "depends_on",
+        "explanation": "The 'queue' component in chunk_1 has a cross-reference to 'DPC++', which is a component in chunk_0, indicating a direct dependency.",
+        "is_explicit": true
+      },
+      {
+        "from_component": "buffer<int>",
+        "to_component": "queue",
+        "from_chunk": "chunk_0",
+        "to_chunk": "chunk_1",
+        "relationship_type": "depends_on",
+        "explanation": "The 'queue' component in chunk_1 depends on 'buffer' (which is the same as 'buffer<int>' in chunk_0), indicating an implicit dependency.",
+        "is_explicit": false
+      },
+      {
+        "from_component": "buffer<int>",
+        "to_component": "accessor",
+        "from_chunk": "chunk_0",
+        "to_chunk": "chunk_1",
+        "relationship_type": "depends_on",
+        "explanation": "The 'accessor' component in chunk_1 depends on 'buffer' (which is the same as 'buffer<int>' in chunk_0), indicating an implicit dependency.",
+        "is_explicit": false
+      },
+      {
+        "from_component": "buffer<int>",
+        "to_component": "host_accessor",
+        "from_chunk": "chunk_0",
+        "to_chunk": "chunk_1",
+        "relationship_type": "depends_on",
+        "explanation": "The 'host_accessor' component in chunk_1 depends on 'buffer' (which is the same as 'buffer<int>' in chunk_0), indicating an implicit dependency.",
+        "is_explicit": false
+      }
+    ],
+    "unresolved_references": []
+  }
+}

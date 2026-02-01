@@ -1,0 +1,211 @@
+{
+  "_meta": {
+    "phase": "phase1",
+    "identifier": "chunk_0",
+    "saved_at": "2026-02-01T20:36:07.214285",
+    "model": "gpt-4o"
+  },
+  "data": {
+    "chunk_id": "chunk_0",
+    "chunk_range": "0-7032",
+    "components": [
+      {
+        "name": "インテル® oneAPI リルキット",
+        "description": "oneAPI ツールキットの配布方法",
+        "inputs": [
+          "インテル® ダンロリバーニー",
+          "メンテナ/リポジトリ",
+          "インテル® Tiber™ AI イーラド"
+        ],
+        "outputs": [
+          "インストールガイド",
+          "インストール手順"
+        ],
+        "dependencies": [
+          "インストールガイド"
+        ],
+        "side_effects": [
+          "システムのトロジー調査",
+          "デバイス選択"
+        ]
+      },
+      {
+        "name": "インストールガイド",
+        "description": "インストール手順のドキュメンテーション",
+        "inputs": [
+          "インテル® ダンロリバーニー",
+          "メンテナ/リポジトリ",
+          "インテル® Tiber™ AI イーラド"
+        ],
+        "outputs": [
+          "インストール手順の詳細"
+        ],
+        "dependencies": [
+          "インテル® oneAPI リルキット"
+        ],
+        "side_effects": []
+      },
+      {
+        "name": "インテル® oneAPI バー・ツールキット",
+        "description": "oneAPI ツールキットの導入ガイド",
+        "inputs": [
+          "Linux* 版",
+          "Windows* 版"
+        ],
+        "outputs": [
+          "導入手順",
+          "ドキュメンテーション"
+        ],
+        "dependencies": [
+          "インストールガイド"
+        ],
+        "side_effects": []
+      },
+      {
+        "name": "インテル® HPC リルキット",
+        "description": "HPC ツールキットの導入ガイド",
+        "inputs": [
+          "Linux* 版",
+          "Windows* 版"
+        ],
+        "outputs": [
+          "導入手順",
+          "ドキュメンテーション"
+        ],
+        "dependencies": [
+          "インストールガイド"
+        ],
+        "side_effects": []
+      },
+      {
+        "name": "SYCL*",
+        "description": "異質コンピューティング用の抽象化レイヤー",
+        "inputs": [
+          "LLVM C++ ハンバイヤラ",
+          "ISO C++"
+        ],
+        "outputs": [
+          "DPC++",
+          "並列処理機能"
+        ],
+        "dependencies": [
+          "LLVM/OpenMP* 開連のドキュメント",
+          "OpenMP* 仕様"
+        ],
+        "side_effects": [
+          "例外処理",
+          "デバイス互換性検出"
+        ]
+      },
+      {
+        "name": "DPC++",
+        "description": "SYCL* 基盤の並列処理実装",
+        "inputs": [
+          "SYCL* ライブラリ",
+          "LLVM C++ ハンバイヤラ"
+        ],
+        "outputs": [
+          "並列処理実装",
+          "C++ ハンバイヤラ"
+        ],
+        "dependencies": [
+          "SYCL*",
+          "LLVM C++ ハンバイヤラ"
+        ],
+        "side_effects": [
+          "デバイス選択",
+          "バッファ管理"
+        ]
+      },
+      {
+        "name": "OpenMP*",
+        "description": "異質コンピューティング用の並列処理モデル",
+        "inputs": [
+          "インテル® oneAPI ツールキット",
+          "インテル® HPC ツールキット"
+        ],
+        "outputs": [
+          "ターゲットデバイス実行",
+          "バッファ管理"
+        ],
+        "dependencies": [
+          "インテル® oneAPI ツールキット",
+          "インテル® HPC ツールキット"
+        ],
+        "side_effects": [
+          "FPGA デバイス非対応"
+        ]
+      },
+      {
+        "name": "buffer<int>",
+        "description": "メモリバッファ管理",
+        "inputs": [
+          "range",
+          "アクセサル"
+        ],
+        "outputs": [
+          "バッファデータ",
+          "アクセサル"
+        ],
+        "dependencies": [
+          "queue",
+          "accessor"
+        ],
+        "side_effects": [
+          "メモリアクセス",
+          "デバイス同期"
+        ]
+      },
+      {
+        "name": "queue",
+        "description": "デバイスとの通信キュー",
+        "inputs": [
+          "アクセサル",
+          "ターゲットデバイス"
+        ],
+        "outputs": [
+          "タスク送信",
+          "デバイス同期"
+        ],
+        "dependencies": [
+          "buffer<int>",
+          "accessor"
+        ],
+        "side_effects": [
+          "デバイス選択",
+          "タスク送信"
+        ]
+      },
+      {
+        "name": "host_accessor",
+        "description": "ホスト側のバッファアクセス",
+        "inputs": [
+          "buffer<int>",
+          "アクセサル"
+        ],
+        "outputs": [
+          "バッファデータ",
+          "結果読み取り"
+        ],
+        "dependencies": [
+          "buffer<int>",
+          "queue"
+        ],
+        "side_effects": [
+          "データ読み取り",
+          "デバイス同期"
+        ]
+      }
+    ],
+    "cross_references": [
+      "LLVM/OpenMP* 開連のドキュメント",
+      "OpenMP* 仕様",
+      "DPC++",
+      "SYCL* 2020仕様PDF英語(Rev10) | 日本語(Rev6)",
+      "Khronos SYCL* API リフアレnton",
+      "Data Parallel C++: Mastering DPC++",
+      "インテル® oneAPI バー・ツールキット",
+      "インテル® HPC リルキット"
+    ]
+  }
+}

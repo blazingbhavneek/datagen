@@ -1,0 +1,138 @@
+{
+  "_meta": {
+    "phase": "phase1",
+    "identifier": "chunk_1",
+    "saved_at": "2026-02-01T20:35:53.198678",
+    "model": "gpt-4o"
+  },
+  "data": {
+    "chunk_id": "chunk_1",
+    "chunk_range": "7032-9863",
+    "components": [
+      {
+        "name": "queue",
+        "description": "Manages connection between host and accelerator device",
+        "inputs": [
+          "range object"
+        ],
+        "outputs": [
+          "submission interface for kernel execution"
+        ],
+        "dependencies": [
+          "buffer",
+          "handler"
+        ],
+        "side_effects": [
+          "sends execution flow to accelerator device"
+        ]
+      },
+      {
+        "name": "buffer<int>",
+        "description": "Memory buffer for array data storage",
+        "inputs": [
+          "range object",
+          "initialization values"
+        ],
+        "outputs": [
+          "array data structure"
+        ],
+        "dependencies": [],
+        "side_effects": [
+          "allocates memory on device"
+        ]
+      },
+      {
+        "name": "accessor",
+        "description": "Interface for accessing buffer data",
+        "inputs": [
+          "buffer",
+          "handler"
+        ],
+        "outputs": [
+          "data access interface"
+        ],
+        "dependencies": [
+          "buffer"
+        ],
+        "side_effects": [
+          "enables read/write operations on buffer"
+        ]
+      },
+      {
+        "name": "handler",
+        "description": "Execution context for kernel functions",
+        "inputs": [
+          "accessor"
+        ],
+        "outputs": [
+          "kernel execution context"
+        ],
+        "dependencies": [
+          "queue"
+        ],
+        "side_effects": [
+          "manages parallel execution context"
+        ]
+      },
+      {
+        "name": "parallel_for",
+        "description": "Parallel execution function",
+        "inputs": [
+          "range object",
+          "lambda function"
+        ],
+        "outputs": [
+          "parallel execution results"
+        ],
+        "dependencies": [
+          "handler"
+        ],
+        "side_effects": [
+          "executes kernel on accelerator device"
+        ]
+      },
+      {
+        "name": "host_accessor",
+        "description": "Interface for host-side data access",
+        "inputs": [
+          "buffer"
+        ],
+        "outputs": [
+          "host-side data access"
+        ],
+        "dependencies": [
+          "buffer"
+        ],
+        "side_effects": [
+          "ensures data availability after execution"
+        ]
+      },
+      {
+        "name": "range",
+        "description": "Defines data range for processing",
+        "inputs": [
+          "number of elements"
+        ],
+        "outputs": [
+          "range object"
+        ],
+        "dependencies": [],
+        "side_effects": [
+          "defines processing scope"
+        ]
+      }
+    ],
+    "cross_references": [
+      "DPC++",
+      "Khronos*",
+      "SIMD",
+      "FPGA",
+      "Intel oneAPI DPC++/C++ guide",
+      "Intel Fortran guide",
+      "OpenMP* directives",
+      "map clause",
+      "firstprivate clause",
+      "target directive"
+    ]
+  }
+}

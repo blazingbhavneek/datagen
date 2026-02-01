@@ -1,0 +1,35 @@
+{
+  "kept_questions": [
+    {
+      "question_id": "q1",
+      "question_ja": "DPC++とbuffer<int>の間の接続を形成するコンポーネントは？",
+      "correct_answer": "キュー",
+      "model_answer": "queue",
+      "passed": false,
+      "model_reasoning": "I got it wrong because I provided the English term \"queue\" instead of the Japanese term \"キュー\" for the correct answer. The retrieved sections likely emphasized the Japanese terminology, and I failed to recognize that the answer required the Japanese word for \"queue.\""
+    },
+    {
+      "question_id": "q2",
+      "question_ja": "DPC++とbuffer<int>の依存関係を実現する処理は？",
+      "correct_answer": "パラレル・フォア",
+      "model_answer": "parallel_for",
+      "passed": false,
+      "model_reasoning": "I got it wrong because I provided the English term \"parallel_for\" instead of the correct Japanese term \"パラレル・フォア\". The retrieved sections likely contained the Japanese terminology, but I failed to recognize or use it in the answer."
+    },
+    {
+      "question_id": "q3",
+      "question_ja": "DPC++とbuffer<int>の依存関係を管理する役割は？",
+      "correct_answer": "データ転送",
+      "model_answer": "SYCL* ランタイム",
+      "passed": false,
+      "model_reasoning": "I got it wrong because I conflated the roles of the SYCL* runtime and data transfer. The correct answer is \"データ転送\" (data transfer) because managing dependencies between DPC++ code and buffer<int> involves ensuring data is properly moved between host and device memory. The retrieved sections likely emphasized that data transfer handles these dependencies, while the SYCL runtime focuses on execution model and kernel management."
+    }
+  ],
+  "discarded_questions": [],
+  "summary": {
+    "total": 3,
+    "kept": 3,
+    "discarded": 0,
+    "rag_failure_rate": "100.0%"
+  }
+}

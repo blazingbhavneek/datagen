@@ -1,0 +1,16 @@
+{
+  "_meta": {
+    "phase": "phase5",
+    "identifier": "q1",
+    "saved_at": "2026-02-01T20:40:01.207758",
+    "model": "gpt-4o"
+  },
+  "data": {
+    "question_id": "q1",
+    "question_ja": "DPC++とbuffer<int>の間の接続を形成するコンポーネントは？",
+    "correct_answer": "キュー",
+    "model_answer": "queue",
+    "passed": false,
+    "model_reasoning": "I got it wrong because I provided the English term \"queue\" instead of the Japanese term \"キュー\" for the correct answer. The retrieved sections likely emphasized the Japanese terminology, and I failed to recognize that the answer required the Japanese word for \"queue.\""
+  }
+}

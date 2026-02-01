@@ -1,0 +1,19 @@
+{
+  "_meta": {
+    "phase": "phase5",
+    "identifier": "Q5",
+    "saved_at": "2026-02-01T21:22:26.295218",
+    "model": "gpt-4o"
+  },
+  "data": {
+    "question_id": "Q5",
+    "question_ja": "FPGAデバイスのサポートが明示的に否定されている文書のセクションは？",
+    "correct_answer": "記載されていない",
+    "model_answer": "わからない",
+    "passed": false,
+    "semantic_match": false,
+    "match_confidence": 0.3,
+    "match_reasoning": "The correct answer '記載されていない' indicates the document does not mention FPGA support being explicitly denied. The model's answer 'わからない' (unknown) implies uncertainty, which is not equivalent to 'not stated'. While 'わからない' matches 'unknown' per rule 4, it does not align with the specific concept of 'not stated' in the correct answer.",
+    "model_reasoning": "1. **If you got it WRONG**: The correct answer is \"記載されていない\" (not mentioned), but your answer was \"わからない\" (unknown). This indicates you couldn't locate a specific section explicitly denying FPGA support. The document likely omitted any mention of FPGA support, so the absence of such a section led to confusion. You may have assumed a denial existed based on partial context, but the correct answer hinges on the absence of explicit information. \n\n2. **If you got it WRONG**: The critical missing information was the lack of a section explicitly stating FPGA support was denied. If the document only listed supported devices without mentioning FPGAs, or if no section addressed FPGA compatibility, the correct answer would be that it's not recorded. You couldn't connect scattered details (e.g., other devices being supported) to infer a denial, as the document didn't provide direct evidence."
+  }
+}

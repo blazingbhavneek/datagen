@@ -116,56 +116,6 @@ class StitchedGraph(BaseModel):
     )
 
 
-class Gap(BaseModel):
-    gap_id: str
-    involved_chunks: list[str]
-    involved_components: list[str]
-    description: str = Field(
-        ...,
-        description="What information is missing or only inferrable. In English."
-    )
-    implicit_edges: list[str] = Field(
-        ...,
-        description="Which edges from Phase 2 are invisible/undocumented"
-    )
-    why_rag_fails: str = Field(
-        ...,
-        description="Exactly why retrieval cannot surface this. What textual signal is missing?"
-    )
-
-class GapAnalysis(BaseModel):
-    gaps: list[Gap]
-
-
-class BenchmarkQuestion(BaseModel):
-    question_id: str
-    source_gap_id: str
-    question_ja: str = Field(..., description="The question in Japanese")
-    question_en: str = Field(..., description="The question in English (for your review)")
-    answer: str = Field(
-        ...,
-        description="Single word or max 3-word answer. Language matches question_ja."
-    )
-    target_chunks: list[str] = Field(
-        ...,
-        description="Which chunk_ids must be understood to answer this"
-    )
-    why_rag_fails: str
-
-class QuestionBatch(BaseModel):
-    questions: list[BenchmarkQuestion]
-
-
-class ValidationResult(BaseModel):
-    question_id: str
-    question_ja: str
-    correct_answer: str
-    model_answer: str
-    passed: bool = Field(
-        ...,
-        description="True if model got it RIGHT (bad — too easy). False if model failed (good — keep)."
-    )
-    model_reasoning: str
 
 
 # ─────────────────────────────────────────────
@@ -260,3 +210,115 @@ def load_intermediate(phase: str, identifier: str) -> Any:
 
 def chunk_id_for_index(idx: int) -> str:
     return f"chunk_{idx}"
+
+
+"""
+config.py - Additional models needed for enhanced Phase 5
+
+Add these to your existing config.py file:
+"""
+
+from pydantic import BaseModel, Field
+from typing import Optional
+
+
+# ─────────────────────────────────────────────
+# Existing models (for reference - you already have these)
+# ─────────────────────────────────────────────
+class ValidationResult(BaseModel):
+    """Enhanced validation result with semantic matching"""
+    question_id: str
+    question_ja: str
+    correct_answer: str
+    model_answer: str
+    passed: bool
+    semantic_match: bool = Field(description="Whether answer is semantically equivalent to correct answer")
+    match_confidence: float = Field(description="Confidence score 0-1 for semantic match")
+    match_reasoning: str = Field(description="Explanation of why answers match or don't match")
+    model_reasoning: str = Field(description="Model's explanation of its answer")
+
+
+class SemanticMatch(BaseModel):
+    """Result of semantic equivalence check between two answers"""
+    is_match: bool = Field(description="True if answers are semantically equivalent")
+    confidence: float = Field(
+        ge=0.0, 
+        le=1.0,
+        description="Confidence score (0.0-1.0) in the match decision"
+    )
+    reasoning: str = Field(
+        description="Explanation of why the answers do or don't match, considering language differences"
+    )
+
+
+# ─────────────────────────────────────────────
+# Enhanced GapAnalysis (if you want stricter gaps)
+# ─────────────────────────────────────────────
+class Gap(BaseModel):
+    """Individual gap in the dependency graph"""
+    gap_id: str = ""
+    gap_type: str = Field(description="Type: EMERGENT_BEHAVIOR, NEGATIVE_SPACE, TEMPORAL_DEPENDENCY, etc.")
+    description: str
+    involved_chunks: list[str] = Field(min_items=3)  # Increased minimum from 2
+    involved_components: list[str]
+    implicit_edges: list[str] = Field(
+        min_items=2,
+        description="List of implicit edge IDs from the graph"
+    )
+    inference_path: str = Field(
+        description="Step-by-step reasoning required to bridge this gap"
+    )
+    why_rag_fails: str = Field(
+        description="Specific explanation of why retrieval-based systems cannot solve this"
+    )
+
+
+class GapAnalysis(BaseModel):
+    """Collection of identified gaps"""
+    gaps: list[Gap]
+    metadata: dict = Field(
+        default_factory=lambda: {
+            "total_gaps": 0,
+            "gap_types_found": [],
+        }
+    )
+
+
+# ─────────────────────────────────────────────
+# Enhanced Question models
+# ─────────────────────────────────────────────
+class Question(BaseModel):
+    """Individual benchmark question with anti-RAG metadata"""
+    question_id: str = ""
+    source_gap_id: str = ""
+    question_ja: str = Field(description="Question in Japanese")
+    question_en: str = Field(description="English translation for review")
+    answer: str = Field(description="Correct answer in Japanese (1-3 words)")
+    answer_en: str = Field(description="English translation of answer")
+    
+    # Anti-RAG metadata
+    anti_rag_technique: str = Field(
+        description="Which anti-RAG technique is used (e.g., TERMINOLOGICAL_MISDIRECTION)"
+    )
+    inference_path: str = Field(
+        description="Step-by-step reasoning needed to derive the answer"
+    )
+    rag_will_retrieve: list[str] = Field(
+        description="Chunk IDs that RAG will incorrectly retrieve based on keywords"
+    )
+    target_chunks: list[str] = Field(
+        description="Chunk IDs that actually contain the necessary information"
+    )
+    requires_hops: int = Field(
+        ge=2,
+        description="Number of reasoning hops required (minimum 2)"
+    )
+
+
+class QuestionBatch(BaseModel):
+    """Batch of questions generated for one gap"""
+    questions: list[Question] = Field(min_items=5)  # Increased from 3
+    gap_metadata: dict = Field(
+        default_factory=dict,
+        description="Metadata about the source gap"
+    )

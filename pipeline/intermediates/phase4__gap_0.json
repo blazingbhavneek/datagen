@@ -1,8 +1,8 @@
 {
   "_meta": {
     "phase": "phase4",
-    "identifier": "all_questions",
-    "saved_at": "2026-02-01T21:22:03.268761",
+    "identifier": "gap_0",
+    "saved_at": "2026-02-01T21:22:03.267444",
     "model": "gpt-4o"
   },
   "data": {
@@ -97,6 +97,21 @@
         ],
         "requires_hops": 2
       }
-    ]
+    ],
+    "gap_metadata": {
+      "gap_type": "NEGATIVE_SPACE",
+      "involved_chunks": [
+        "chunk_0",
+        "chunk_1",
+        "unresolved_reference"
+      ],
+      "involved_components": [
+        "SYCL* runtime",
+        "FPGA デバイス",
+        "DPC++"
+      ],
+      "inference_path": "1. SYCL* runtime (chunk_1) は DPC++ (chunk_0) と暗黙の依存関係 2. FPGAとの接続の欠如(unresolved_reference) 3. この制約がシステム機能に影響",
+      "why_rag_fails": "明示的な接続情報の欠如と未解決参照がRAGの検索を妨げる"
+    }
   }
 }

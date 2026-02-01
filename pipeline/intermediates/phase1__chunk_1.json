@@ -2,7 +2,7 @@
   "_meta": {
     "phase": "phase1",
     "identifier": "chunk_1",
-    "saved_at": "2026-02-01T20:35:53.198678",
+    "saved_at": "2026-02-01T21:18:58.506554",
     "model": "gpt-4o"
   },
   "data": {
@@ -10,129 +10,113 @@
     "chunk_range": "7032-9863",
     "components": [
       {
-        "name": "queue",
-        "description": "Manages connection between host and accelerator device",
+        "name": "buffer",
+        "description": "A data structure that holds data for the device",
         "inputs": [
-          "range object"
+          "range",
+          "size (num)"
         ],
         "outputs": [
-          "submission interface for kernel execution"
+          "data buffer for device access"
         ],
         "dependencies": [
-          "buffer",
-          "handler"
+          "queue",
+          "accessor"
         ],
         "side_effects": [
-          "sends execution flow to accelerator device"
+          "data transfer to device"
         ]
       },
       {
-        "name": "buffer<int>",
-        "description": "Memory buffer for array data storage",
-        "inputs": [
-          "range object",
-          "initialization values"
-        ],
+        "name": "queue",
+        "description": "Manages the execution on the device",
+        "inputs": [],
         "outputs": [
-          "array data structure"
+          "execution context for device"
         ],
-        "dependencies": [],
+        "dependencies": [
+          "SYCL* runtime"
+        ],
         "side_effects": [
-          "allocates memory on device"
+          "sends work to device"
         ]
       },
       {
         "name": "accessor",
-        "description": "Interface for accessing buffer data",
+        "description": "Provides access to buffer data",
         "inputs": [
           "buffer",
           "handler"
         ],
         "outputs": [
-          "data access interface"
+          "data access for parallel processing"
         ],
         "dependencies": [
-          "buffer"
-        ],
-        "side_effects": [
-          "enables read/write operations on buffer"
-        ]
-      },
-      {
-        "name": "handler",
-        "description": "Execution context for kernel functions",
-        "inputs": [
-          "accessor"
-        ],
-        "outputs": [
-          "kernel execution context"
-        ],
-        "dependencies": [
-          "queue"
-        ],
-        "side_effects": [
-          "manages parallel execution context"
-        ]
-      },
-      {
-        "name": "parallel_for",
-        "description": "Parallel execution function",
-        "inputs": [
-          "range object",
-          "lambda function"
-        ],
-        "outputs": [
-          "parallel execution results"
-        ],
-        "dependencies": [
+          "buffer",
           "handler"
         ],
         "side_effects": [
-          "executes kernel on accelerator device"
+          "modifies buffer data"
         ]
       },
       {
         "name": "host_accessor",
-        "description": "Interface for host-side data access",
+        "description": "Accesses data on the host after processing",
         "inputs": [
           "buffer"
         ],
         "outputs": [
-          "host-side data access"
+          "read results"
         ],
         "dependencies": [
           "buffer"
         ],
         "side_effects": [
-          "ensures data availability after execution"
+          "waits for completion"
         ]
       },
       {
-        "name": "range",
-        "description": "Defines data range for processing",
+        "name": "parallel_for",
+        "description": "Executes parallel processing on the device",
         "inputs": [
-          "number of elements"
+          "range",
+          "lambda function"
         ],
         "outputs": [
-          "range object"
+          "parallel processing results"
+        ],
+        "dependencies": [
+          "accessor",
+          "queue"
+        ],
+        "side_effects": [
+          "data modification on device"
+        ]
+      },
+      {
+        "name": "SYCL* runtime",
+        "description": "Manages device execution and data transfer",
+        "inputs": [
+          "queue",
+          "buffer"
+        ],
+        "outputs": [
+          "execution context",
+          "data transfer"
         ],
         "dependencies": [],
         "side_effects": [
-          "defines processing scope"
+          "device resource allocation"
         ]
       }
     ],
     "cross_references": [
-      "DPC++",
-      "Khronos*",
-      "SIMD",
-      "FPGA",
-      "Intel oneAPI DPC++/C++ guide",
-      "Intel Fortran guide",
-      "OpenMP* directives",
-      "map clause",
-      "firstprivate clause",
-      "target directive"
+      "DPC++ 基礎SENPLBコトのウークスル",
+      "Khronos*の「SYCL*リフレUNS」",
+      "インテルoneAPI DPC++/C++ メンハリーテフロー・ガイド",
+      "インテルFortran メンハリーナ・デバイドおよリフロー・ガイド",
+      "FPGA テバイス",
+      "OpenMP* ダレクテイ"
     ]
   }
 }

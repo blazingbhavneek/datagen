@@ -1,35 +1,73 @@
 {
   "kept_questions": [
     {
-      "question_id": "q1",
-      "question_ja": "DPC++とbuffer<int>の間の接続を形成するコンポーネントは？",
-      "correct_answer": "キュー",
-      "model_answer": "queue",
+      "question_id": "Q1",
+      "question_ja": "SYCL*ランタイムとFPGAデバイスの相互運用性に関する文書で、明示的に記載されていない制約は？",
+      "correct_answer": "サポートされていない",
+      "model_answer": "わからない",
       "passed": false,
-      "model_reasoning": "I got it wrong because I provided the English term \"queue\" instead of the Japanese term \"キュー\" for the correct answer. The retrieved sections likely emphasized the Japanese terminology, and I failed to recognize that the answer required the Japanese word for \"queue.\""
+      "semantic_match": false,
+      "match_confidence": 0.3,
+      "match_reasoning": "The correct answer 'サポートされていない' (not supported) indicates a definitive constraint, while the model's answer 'わからない' (unknown) expresses uncertainty. These represent different concepts: one is a factual statement about unsupported features, and the other is an acknowledgment of lack of knowledge. Rule 4 only matches 'わからない' with 'unknown' or '不明', but the correct answer is a specific technical statement about unsupported functionality, which is not equivalent to uncertainty.",
+      "model_reasoning": "1. **If you got it WRONG**: The correct answer \"サポートされていない\" (not supported) implies the document explicitly states that SYCL* runtime and FPGA devices are not interoperable. However, your answer \"わからない\" (don't know) suggests you failed to locate this explicit statement. The missing information was likely in a section discussing compatibility limitations, which directly addresses the lack of support. You couldn’t connect this to the question because you didn’t review the relevant sections detailing interoperability constraints.  \n\n2. **If you got it RIGHT**: Not applicable here, but if you had found a section stating \"SYCL* runtime does not support FPGA devices\" or similar, you could have directly retrieved the answer. The key was identifying the explicit mention of unsupported features, which would have clarified the constraint."
     },
     {
-      "question_id": "q2",
-      "question_ja": "DPC++とbuffer<int>の依存関係を実現する処理は？",
-      "correct_answer": "パラレル・フォア",
-      "model_answer": "parallel_for",
+      "question_id": "Q2",
+      "question_ja": "SYCL*ランタイムがFPGAデバイスを処理できない場合、何が発生するか？",
+      "correct_answer": "動作しない",
+      "model_answer": "わからない",
       "passed": false,
-      "model_reasoning": "I got it wrong because I provided the English term \"parallel_for\" instead of the correct Japanese term \"パラレル・フォア\". The retrieved sections likely contained the Japanese terminology, but I failed to recognize or use it in the answer."
+      "semantic_match": false,
+      "match_confidence": 0.1,
+      "match_reasoning": "The correct answer '動作しない' (does not operate) is a definitive statement about system behavior, while the model's answer 'わからない' (unknown) indicates lack of knowledge. These represent completely different concepts: one is a factual outcome, the other is an epistemic state. Rule 7 states that completely different concepts do not match.",
+      "model_reasoning": "1. **If you got it RIGHT**: The correct answer \"動作しない\" (does not work) is directly implied by the document's explanation that SYCL* runtime is specifically designed for GPUs and not for FPGA devices. The sections likely stated that SYCL* lacks the necessary infrastructure to handle FPGA-specific tasks, leading to failure. This was a straightforward retrieval of the key point about compatibility.  \n\n2. **If you got it WRONG**: The missing information was the explicit connection between the runtime's inability to process FPGAs and the system's failure to operate. The document might have scattered details about SYCL* limitations but did not clearly state that this leads to \"動作しない.\" Without explicitly linking the runtime's failure to the device's non-functionality, the answer remained ambiguous, leading to \"わからない.\""
     },
     {
-      "question_id": "q3",
-      "question_ja": "DPC++とbuffer<int>の依存関係を管理する役割は？",
-      "correct_answer": "データ転送",
-      "model_answer": "SYCL* ランタイム",
+      "question_id": "Q3",
+      "question_ja": "FPGAデバイスのサポートが記載されていない文書のセクションは？",
+      "correct_answer": "記載されていない",
+      "model_answer": "わからない",
       "passed": false,
-      "model_reasoning": "I got it wrong because I conflated the roles of the SYCL* runtime and data transfer. The correct answer is \"データ転送\" (data transfer) because managing dependencies between DPC++ code and buffer<int> involves ensuring data is properly moved between host and device memory. The retrieved sections likely emphasized that data transfer handles these dependencies, while the SYCL runtime focuses on execution model and kernel management."
+      "semantic_match": false,
+      "match_confidence": 0.3,
+      "match_reasoning": "The correct answer '記載されていない' indicates a factual absence of FPGA device support documentation, while the model's answer 'わからない' expresses uncertainty. These are distinct concepts: one asserts a definitive state, the other conveys lack of knowledge. Rule 4 only applies to expressions of uncertainty ('unknown'/'不明'), not factual statements.",
+      "model_reasoning": "1. **If you got it WRONG**: The correct answer hinges on the absence of FPGA support information in the document sections, but your answer (\"わからない\") reflects uncertainty rather than recognizing the explicit absence. The key missing connection was that the document sections **did not mention FPGA support at all**, making the correct answer \"記載されていない\" (not mentioned). You likely failed to systematically check all sections for explicit mentions of FPGA support, leading to confusion between \"not found\" and \"not known.\"  \n\n2. **Specific gaps**: The document sections provided likely omitted any reference to FPGA devices, but you may have assumed the answer required identifying a section that *failed to include* the information (e.g., a section about hardware requirements missing FPGA details). Instead, the correct answer is that the information was **completely absent** from the document, not just scattered or missing in a specific section. This distinction required explicitly verifying all sections for FPGA-related content, which you may have overlooked."
+    },
+    {
+      "question_id": "Q4",
+      "question_ja": "SYCL*ランタイムとFPGAデバイスの相互運用性に関する最大の制約は？",
+      "correct_answer": "0",
+      "model_answer": "わからない",
+      "passed": false,
+      "semantic_match": false,
+      "match_confidence": 0.1,
+      "match_reasoning": "The correct answer '0' is a numerical value, while the model's answer 'わからない' (unknown) indicates uncertainty. Rule 4 states that 'わからない' matches 'unknown', but rule 5 requires numerical answers to match exactly. Since '0' is not equivalent to 'unknown' in this context, the answers are not semantically equivalent.",
+      "model_reasoning": "1. **If you got it WRONG**: The correct answer \"0\" suggests there are no constraints, but the retrieved sections likely lacked explicit information about SYCL* runtime and FPGA device interoperability constraints. The documents may have focused on other aspects (e.g., performance, tools) rather than specific limitations, leaving gaps in understanding.  \n2. **Missing connections**: The sections did not mention interoperability constraints between SYCL* and FPGAs, so the answer couldn't be derived. The user’s \"don’t know\" response was correct in the absence of relevant data, but the correct answer \"0\" implies the question assumes no constraints, which wasn’t explicitly stated in the provided sections."
+    },
+    {
+      "question_id": "Q5",
+      "question_ja": "FPGAデバイスのサポートが明示的に否定されている文書のセクションは？",
+      "correct_answer": "記載されていない",
+      "model_answer": "わからない",
+      "passed": false,
+      "semantic_match": false,
+      "match_confidence": 0.3,
+      "match_reasoning": "The correct answer '記載されていない' indicates the document does not mention FPGA support being explicitly denied. The model's answer 'わからない' (unknown) implies uncertainty, which is not equivalent to 'not stated'. While 'わからない' matches 'unknown' per rule 4, it does not align with the specific concept of 'not stated' in the correct answer.",
+      "model_reasoning": "1. **If you got it WRONG**: The correct answer is \"記載されていない\" (not mentioned), but your answer was \"わからない\" (unknown). This indicates you couldn't locate a specific section explicitly denying FPGA support. The document likely omitted any mention of FPGA support, so the absence of such a section led to confusion. You may have assumed a denial existed based on partial context, but the correct answer hinges on the absence of explicit information. \n\n2. **If you got it WRONG**: The critical missing information was the lack of a section explicitly stating FPGA support was denied. If the document only listed supported devices without mentioning FPGAs, or if no section addressed FPGA compatibility, the correct answer would be that it's not recorded. You couldn't connect scattered details (e.g., other devices being supported) to infer a denial, as the document didn't provide direct evidence."
     }
   ],
   "discarded_questions": [],
   "summary": {
-    "total": 3,
-    "kept": 3,
+    "total": 5,
+    "kept": 5,
     "discarded": 0,
-    "rag_failure_rate": "100.0%"
+    "rag_failure_rate": "100.0%",
+    "high_confidence_failures": 0,
+    "low_confidence_failures": 5
+  },
+  "metadata": {
+    "validation_method": "semantic_matching",
+    "retrieval_simulation": "perfect_chunk_retrieval",
+    "note": "Questions kept are those where model failed even with perfect retrieval"
   }
 }

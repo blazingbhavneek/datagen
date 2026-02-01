@@ -2,49 +2,44 @@
   "_meta": {
     "phase": "phase2",
     "identifier": "final_graph",
-    "saved_at": "2026-02-01T20:38:27.318509",
+    "saved_at": "2026-02-01T21:20:15.339428",
     "model": "gpt-4o"
   },
   "data": {
     "batch_label": "pass_0__batch_0",
     "edges": [
       {
+        "from_component": "SYCL*",
+        "to_component": "SYCL* runtime",
+        "from_chunk": "chunk_0",
+        "to_chunk": "chunk_1",
+        "relationship_type": "depends_on",
+        "explanation": "The SYCL* programming model (chunk_0) implicitly depends on the SYCL* runtime (chunk_1) to manage device execution and data transfer, which is a core component of the SYCL* ecosystem.",
+        "is_explicit": false
+      },
+      {
         "from_component": "DPC++",
-        "to_component": "queue",
+        "to_component": "SYCL* runtime",
         "from_chunk": "chunk_0",
         "to_chunk": "chunk_1",
         "relationship_type": "depends_on",
-        "explanation": "The 'queue' component in chunk_1 has a cross-reference to 'DPC++', which is a component in chunk_0, indicating a direct dependency.",
+        "explanation": "DPC++ (chunk_0) is based on SYCL* and requires the SYCL* runtime (chunk_1) to execute parallel code on heterogeneous devices.",
+        "is_explicit": false
+      },
+      {
+        "from_component": "queue",
+        "to_component": "SYCL* runtime",
+        "from_chunk": "chunk_1",
+        "to_chunk": "chunk_1",
+        "relationship_type": "depends_on",
+        "explanation": "The queue (chunk_1) explicitly depends on the SYCL* runtime (chunk_1) to manage device execution contexts.",
         "is_explicit": true
-      },
-      {
-        "from_component": "buffer<int>",
-        "to_component": "queue",
-        "from_chunk": "chunk_0",
-        "to_chunk": "chunk_1",
-        "relationship_type": "depends_on",
-        "explanation": "The 'queue' component in chunk_1 depends on 'buffer' (which is the same as 'buffer<int>' in chunk_0), indicating an implicit dependency.",
-        "is_explicit": false
-      },
-      {
-        "from_component": "buffer<int>",
-        "to_component": "accessor",
-        "from_chunk": "chunk_0",
-        "to_chunk": "chunk_1",
-        "relationship_type": "depends_on",
-        "explanation": "The 'accessor' component in chunk_1 depends on 'buffer' (which is the same as 'buffer<int>' in chunk_0), indicating an implicit dependency.",
-        "is_explicit": false
-      },
-      {
-        "from_component": "buffer<int>",
-        "to_component": "host_accessor",
-        "from_chunk": "chunk_0",
-        "to_chunk": "chunk_1",
-        "relationship_type": "depends_on",
-        "explanation": "The 'host_accessor' component in chunk_1 depends on 'buffer' (which is the same as 'buffer<int>' in chunk_0), indicating an implicit dependency.",
-        "is_explicit": false
       }
     ],
-    "unresolved_references": []
+    "unresolved_references": [
+      "インストーラー・ガイド",
+      "sycl::exception",
+      "FPGA テバイス"
+    ]
   }
 }

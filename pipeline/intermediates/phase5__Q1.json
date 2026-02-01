@@ -1,0 +1,19 @@
+{
+  "_meta": {
+    "phase": "phase5",
+    "identifier": "Q1",
+    "saved_at": "2026-02-01T21:22:25.681701",
+    "model": "gpt-4o"
+  },
+  "data": {
+    "question_id": "Q1",
+    "question_ja": "SYCL*ランタイムとFPGAデバイスの相互運用性に関する文書で、明示的に記載されていない制約は？",
+    "correct_answer": "サポートされていない",
+    "model_answer": "わからない",
+    "passed": false,
+    "semantic_match": false,
+    "match_confidence": 0.3,
+    "match_reasoning": "The correct answer 'サポートされていない' (not supported) indicates a definitive constraint, while the model's answer 'わからない' (unknown) expresses uncertainty. These represent different concepts: one is a factual statement about unsupported features, and the other is an acknowledgment of lack of knowledge. Rule 4 only matches 'わからない' with 'unknown' or '不明', but the correct answer is a specific technical statement about unsupported functionality, which is not equivalent to uncertainty.",
+    "model_reasoning": "1. **If you got it WRONG**: The correct answer \"サポートされていない\" (not supported) implies the document explicitly states that SYCL* runtime and FPGA devices are not interoperable. However, your answer \"わからない\" (don't know) suggests you failed to locate this explicit statement. The missing information was likely in a section discussing compatibility limitations, which directly addresses the lack of support. You couldn’t connect this to the question because you didn’t review the relevant sections detailing interoperability constraints.  \n\n2. **If you got it RIGHT**: Not applicable here, but if you had found a section stating \"SYCL* runtime does not support FPGA devices\" or similar, you could have directly retrieved the answer. The key was identifying the explicit mention of unsupported features, which would have clarified the constraint."
+  }
+}

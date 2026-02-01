@@ -1,0 +1,19 @@
+{
+  "_meta": {
+    "phase": "phase5",
+    "identifier": "Q3",
+    "saved_at": "2026-02-01T21:22:29.318354",
+    "model": "gpt-4o"
+  },
+  "data": {
+    "question_id": "Q3",
+    "question_ja": "FPGAデバイスのサポートが記載されていない文書のセクションは？",
+    "correct_answer": "記載されていない",
+    "model_answer": "わからない",
+    "passed": false,
+    "semantic_match": false,
+    "match_confidence": 0.3,
+    "match_reasoning": "The correct answer '記載されていない' indicates a factual absence of FPGA device support documentation, while the model's answer 'わからない' expresses uncertainty. These are distinct concepts: one asserts a definitive state, the other conveys lack of knowledge. Rule 4 only applies to expressions of uncertainty ('unknown'/'不明'), not factual statements.",
+    "model_reasoning": "1. **If you got it WRONG**: The correct answer hinges on the absence of FPGA support information in the document sections, but your answer (\"わからない\") reflects uncertainty rather than recognizing the explicit absence. The key missing connection was that the document sections **did not mention FPGA support at all**, making the correct answer \"記載されていない\" (not mentioned). You likely failed to systematically check all sections for explicit mentions of FPGA support, leading to confusion between \"not found\" and \"not known.\"  \n\n2. **Specific gaps**: The document sections provided likely omitted any reference to FPGA devices, but you may have assumed the answer required identifying a section that *failed to include* the information (e.g., a section about hardware requirements missing FPGA details). Instead, the correct answer is that the information was **completely absent** from the document, not just scattered or missing in a specific section. This distinction required explicitly verifying all sections for FPGA-related content, which you may have overlooked."
+  }
+}

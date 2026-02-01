@@ -55,34 +55,71 @@ def resolve_chunk_text(chunk_id: str) -> str:
 # ─────────────────────────────────────────────
 # CHAIN (built once, shared)
 # ─────────────────────────────────────────────
-PHASE4_PROMPT = """You are generating benchmark questions for a Japanese technical document.
+PHASE4_PROMPT = """You are generating ADVERSARIAL benchmark questions for a Japanese technical document.
 
-These questions are specifically designed to BREAK RAG (Retrieval Augmented Generation) systems — even multi-pass RAG.
+These questions are specifically designed to DEFEAT advanced RAG systems including:
+- Multi-pass retrieval
+- Reranking
+- Query decomposition
+- Hybrid search (dense + sparse)
+- Context window stuffing
 
 You have been given:
-1. A GAP description — this is something that cannot be answered by reading any single section
-2. The RELEVANT SOURCE SECTIONS that are involved in this gap (in their original Japanese)
+1. A GAP description — something requiring multi-hop inference across 3+ sections
+2. The RELEVANT SOURCE SECTIONS that are involved (in original Japanese)
+3. The INFERENCE PATH — what reasoning is needed to bridge the gap
 
 Your job: generate questions where:
 - The answer is a SINGLE WORD or maximum 3 words (in Japanese)
-- The answer does NOT appear as a direct statement anywhere in the source
-- Answering requires understanding how the involved sections CONNECT, not just reading one
-- The question uses terminology from MULTIPLE sections so it can't be matched to one chunk
+- The answer does NOT appear as a direct quote anywhere in the source
+- Answering requires DERIVING the answer through inference, not retrieval
+- The question uses terminology from MULTIPLE sections so retrieval gets confused
+- Simple keyword matching or semantic similarity will retrieve WRONG chunks
 
-RULES:
-- Questions MUST be in Japanese
+ANTI-RAG TECHNIQUES TO APPLY:
+
+1. TERMINOLOGICAL MISDIRECTION: Use terms from section A to ask about a concept only explained in sections B+C using different terminology. RAG will retrieve A (wrong) instead of B+C.
+
+2. COUNTERFACTUAL FRAMING: Ask "what happens if X" where X contradicts a constraint. The answer requires understanding the constraint (scattered across chunks) + reasoning about the violation. Direct retrieval won't find "if X happens then Y" anywhere.
+
+3. TEMPORAL SEQUENCING: Ask about "the first time" or "before" or "after" something, where the sequence is only derivable by combining initialization orders from multiple chunks. No single chunk states the sequence.
+
+4. IMPLICIT QUANTIFICATION: Ask "how many" or "maximum" or "minimum" where the number must be calculated from constraints in different chunks. E.g., "max concurrent X" = (limit from chunk A) × (multiplier from chunk B) ÷ (overhead from chunk C).
+
+5. CAUSAL CHAIN REVERSAL: Ask about the cause when the document only describes effects in scattered locations. Requires reverse-engineering the causal chain.
+
+6. DOMAIN BRIDGING: Ask about the effect in domain Y of a property in domain X, where the document never explicitly bridges these domains. E.g., "What network condition causes data inconsistency?" when network is discussed in one section and consistency in another with no explicit link.
+
+7. NEGATIVE CONSTRAINT PROBING: Ask what CAN'T happen, where the prohibition is structural (implied by what IS documented) not explicit. E.g., "Which component never processes input Y?" when the prohibition exists because another component always consumes Y first.
+
+QUESTION REQUIREMENTS:
+- Questions MUST be in Japanese (natural, technical Japanese)
 - Answers MUST be in Japanese  
-- Provide an English translation of both for review
-- Do NOT create multiple choice. Short-answer only.
-- Generate 3 questions per gap
-- Each question must target a different aspect of the gap
+- Provide English translation of both for review
+- NO multiple choice — short-answer only
+- Generate 5 questions per gap (increased from 3)
+- Each question must use a DIFFERENT anti-RAG technique
+- Vary the inference depth: 2 questions requiring 2-hop reasoning, 3 questions requiring 3+ hops
+- For each question, document:
+  * Which anti-RAG technique is used
+  * The inference path (step-by-step reasoning needed)
+  * Which chunks RAG will incorrectly retrieve and why
+  * The correct chunks needed (but RAG won't find them)
+
+ANSWER VALIDATION:
+- The answer must be unambiguous (only one correct answer)
+- The answer must be verifiable from the source sections (via inference)
+- The answer must NOT appear verbatim in any single chunk
+- If the answer is a number, it must require calculation from multiple values
 
 --- GAP DESCRIPTION ---
 {gap_description}
 
 --- GAP METADATA ---
+Gap Type: {gap_type}
 Involved chunks: {involved_chunks}
 Involved components: {involved_components}
+Inference path required: {inference_path}
 Why RAG fails: {why_rag_fails}
 
 --- RELEVANT SOURCE SECTIONS ---
@@ -124,11 +161,17 @@ async def generate_for_gap(gap: dict, chain, parser) -> dict:
             f"=== {cid} ===\n{text}" for cid, text in source_sections.items()
         )
 
+        # Extract gap type from description or metadata if available
+        gap_type = gap.get("gap_type", "UNKNOWN")
+        inference_path = gap.get("inference_path", gap.get("why_rag_fails", "Not specified"))
+
         async def _call():
             result = await chain.ainvoke({
                 "gap_description": gap["description"],
+                "gap_type": gap_type,
                 "involved_chunks": json.dumps(gap["involved_chunks"]),
                 "involved_components": json.dumps(gap["involved_components"]),
+                "inference_path": inference_path,
                 "why_rag_fails": gap["why_rag_fails"],
                 "source_sections": source_text,
                 "format_instructions": parser.get_format_instructions(),
@@ -143,6 +186,8 @@ async def generate_for_gap(gap: dict, chain, parser) -> dict:
         result = await async_retry(_call)
         dumped = result.model_dump()
         await save_intermediate("phase4", gap_id, dumped)
+        
+        print(f"  [done] {gap_id}: {len(dumped['questions'])} questions generated")
         return dumped
 
 
@@ -157,7 +202,7 @@ async def run():
         raise RuntimeError("Phase 3 gap_analysis not found. Run phase3 first.")
 
     gaps = gap_analysis["gaps"]
-    print(f"  Generating questions for {len(gaps)} gaps...")
+    print(f"  Generating adversarial questions for {len(gaps)} gaps...")
 
     chain, parser = build_question_chain()
 
@@ -175,7 +220,7 @@ async def run():
 
     # Fire all pending gaps concurrently
     if pending:
-        print(f"  Launching {len(pending)} tasks...")
+        print(f"  Launching {len(pending)} concurrent tasks...")
         results = await asyncio.gather(
             *(generate_for_gap(gap, chain, parser) for gap in pending)
         )
@@ -185,7 +230,8 @@ async def run():
     # Consolidated output
     await save_intermediate("phase4", "all_questions", {"questions": all_questions})
 
-    print(f"\n[Phase 4] Done. {len(all_questions)} questions generated total.")
+    print(f"\n[Phase 4] Done. {len(all_questions)} adversarial questions generated total.")
+    print(f"  Average {len(all_questions) / len(gaps):.1f} questions per gap")
     return all_questions
 
 
